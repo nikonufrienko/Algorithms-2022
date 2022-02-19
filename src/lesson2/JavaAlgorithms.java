@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 class RepresentedString {
     private final Map<Character, Set<Integer>> characterIndexesMap;
     private final Map<Character, LinkedHashSet<Character>> characterSequenceMap;
-    private final LinkedHashSet<Character> characterSet = new LinkedHashSet<>();
+    private final LinkedHashSet<Character> characterLinkedSet = new LinkedHashSet<>();
 
     RepresentedString(String value) {
         characterIndexesMap = new HashMap<>();
@@ -19,7 +19,7 @@ class RepresentedString {
             char currChar = charArrayOfValue[i];
             Set<Integer> indexesOfCurr = characterIndexesMap.computeIfAbsent(currChar, k -> new HashSet<>());
             indexesOfCurr.add(i);
-            characterSet.add(currChar);
+            characterLinkedSet.add(currChar);
             if (i < charArrayOfValue.length - 1) {
                 char nextChar = charArrayOfValue[i + 1];
                 Set<Character> nextChars =
@@ -31,8 +31,8 @@ class RepresentedString {
         }
     }
 
-    public LinkedHashSet<Character> getCharacterSet() {
-        return characterSet;
+    public LinkedHashSet<Character> getCharacterLinkedSet() {
+        return characterLinkedSet;
     }
 
     public Map<Character, Set<Integer>> getCharacterIndexesMap() {
@@ -43,7 +43,7 @@ class RepresentedString {
         return characterSequenceMap;
     }
 
-    List<Character> getLongestCommonChain(
+    public List<Character> getLongestCommonChain(
             RepresentedString other, Character currCharacter,
             Set<Integer> currIndexesOfThisChain, Set<Integer> currIndexesOfOtherChain, List<Character> currChain
     ) {
@@ -172,9 +172,10 @@ public class JavaAlgorithms {
      */
 
     /*
-        Здесь мы обходим два дерева таким образом, чтобы найти наибольшую общую цепочку символов, индексы которых
-        непрерывно идут друг за другом (для этого используются множества индексов, нарастание значений которых
-        проверяется на каждом шаге).
+        Здесь мы обходим два графа (скорее что-то похожее на граф) таким образом, чтобы найти наибольшую общую цепочку
+         символов, индексы которых непрерывно идут друг за другом (для этого используются множества индексов, нарастание
+         значений которых проверяется на каждом шаге).
+         
         Трудоёмкость:
             T = unknown
             сложно оценить
@@ -187,8 +188,8 @@ public class JavaAlgorithms {
         RepresentedString representedSecond = new RepresentedString(second);
         RepresentedString representedFirst = new RepresentedString(firs);
         List<Character> maxChain = new ArrayList<>();
-        for (Character startCharacter : representedFirst.getCharacterSet()) {
-            if(!representedSecond.getCharacterSet().contains(startCharacter)) continue;
+        for (Character startCharacter : representedFirst.getCharacterLinkedSet()) {
+            if(!representedSecond.getCharacterLinkedSet().contains(startCharacter)) continue;
             Set<Integer> currentIndexesOfFirst = representedFirst.getCharacterIndexesMap().get(startCharacter);
             Set<Integer> currentIndexesOfSecond = representedSecond.getCharacterIndexesMap().get(startCharacter);
             List<Character> currChain = new ArrayList<>();
