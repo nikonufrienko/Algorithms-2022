@@ -1,9 +1,102 @@
 package lesson1;
 
 import kotlin.NotImplementedError;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.*;
+import java.util.*;
+
+
+class Person implements Comparable<Person> {
+    public final String name;
+    public final String surname;
+
+    Person(String surname, String name) {
+        this.name = name;
+        this.surname = surname;
+    }
+
+    @Override
+    public int compareTo(@NotNull Person other) {
+        int surnameSize = Integer.min(surname.length(), other.surname.length());
+        String surnameToCompareOfThis = (surname.substring(0, surnameSize)).toLowerCase(Locale.ROOT);
+        String surnameToCompareOfOther = (other.surname.substring(0, surnameSize)).toLowerCase(Locale.ROOT);
+        int surnameCompareResult = surnameToCompareOfThis.compareTo(surnameToCompareOfOther);
+        if (surnameCompareResult == 0 && surname.length() == other.surname.length()) {
+            int nameSize = Integer.min(name.length(), other.name.length());
+            String nameToCompareOfThis = (name.substring(0, nameSize)).toLowerCase(Locale.ROOT);
+            String nameToCompareOfOther = (other.name.substring(0, nameSize)).toLowerCase(Locale.ROOT);
+            int nameCompareResult = nameToCompareOfThis.compareTo(nameToCompareOfOther);
+            if (nameCompareResult == 0) {
+                return Integer.compare(name.length(), other.name.length());
+            } else {
+                return nameCompareResult;
+            }
+        } else if (surnameCompareResult == 0) {
+            return Integer.compare(surname.length(), other.surname.length());
+        }
+        return surnameCompareResult;
+    }
+}
+
+class Home {
+
+    private final List<Person> members = new ArrayList<>();
+
+    public void addMember(Person member) {
+        members.add(member);
+    }
+
+    public Person[] getSortedMembers() {
+        Person[] sortedMembers = members.toArray(new Person[0]);
+        Arrays.sort(sortedMembers);
+        return sortedMembers;
+    }
+}
+
+class Street {
+    private final Map<Integer, Home> homes = new HashMap<>();
+    private int[] sortedHomeNumbers = null;
+
+    public int[] getSortedHomeNumbers() {
+        return sortedHomeNumbers;
+    }
+
+    public Map<Integer, Home> getHomes() {
+        return homes;
+    }
+
+    public void performSorting() {
+        int[] arrayOfNumbers = this.homes.keySet().stream().mapToInt(it -> it).toArray();
+        Arrays.sort(arrayOfNumbers);
+        sortedHomeNumbers = arrayOfNumbers;
+    }
+
+}
 
 @SuppressWarnings("unused")
 public class JavaTasks {
+    private static int getPseudoTime(String line) {
+        String[] timeAndPostfix = line.split(" ");
+        if (timeAndPostfix.length != 2) throw new IllegalArgumentException("Wrong time format!");
+        int pseudoTime = Integer.parseInt(timeAndPostfix[0].replaceAll(":", ""));
+        if (pseudoTime / 1_00_00 == 12) pseudoTime %= 1_00_00;
+        if (timeAndPostfix[1].equals("PM")) pseudoTime += 12_00_00;
+        return pseudoTime;
+    }
+
+    private static String getTimeString(int pseudoTime) {
+        int hours = pseudoTime / 1_00_00;
+        int minutes = (pseudoTime % 1_00_00) / 1_00;
+        int seconds = pseudoTime % 1_00;
+        return String.format(
+                "%02d:%02d:%02d%s",
+                (hours == 0) ? 12 : (hours > 12) ? hours - 12 : hours,
+                minutes, seconds,
+                ((hours < 12) ? " AM" : " PM")
+        );
+    }
+
     /**
      * Сортировка времён
      *
@@ -34,9 +127,26 @@ public class JavaTasks {
      *
      * В случае обнаружения неверного формата файла бросить любое исключение.
      */
-    static public void sortTimes(String inputName, String outputName) {
-        throw new NotImplementedError();
+    static public void sortTimes(String inputName, String outputName) throws IOException {
+        FileReader reader = new FileReader(inputName);
+        String[] lines = new BufferedReader(reader).lines().toArray(String[]::new);
+        reader.close();
+        int[] values = new int[lines.length];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = getPseudoTime(lines[i]);
+        }
+        if (values.length < 20) {
+            Sorts.insertionSort(values);
+        } else {
+            Sorts.mergeSort(values);
+        }
+        FileWriter writer = new FileWriter(outputName);
+        for (int value : values) {
+            writer.write(getTimeString(value) + '\n');
+        }
+        writer.close();
     }
+
 
     /**
      * Сортировка адресов
@@ -64,8 +174,46 @@ public class JavaTasks {
      *
      * В случае обнаружения неверного формата файла бросить любое исключение.
      */
-    static public void sortAddresses(String inputName, String outputName) {
-        throw new NotImplementedError();
+    static public void sortAddresses(String inputName, String outputName) throws IOException {
+        Map<String, Street> streets = new HashMap<>();
+        FileReader reader = new FileReader(inputName);
+        new BufferedReader(reader).lines().forEach(line -> {
+            String[] personWithAddress = line.split(" ");
+            if (personWithAddress.length != 5) throw new IllegalArgumentException("Wrong file data:" + line);
+            String personSurname = personWithAddress[0];
+            String personName = personWithAddress[1];
+            String streetName = personWithAddress[3];
+            int homeNumber = Integer.parseInt(personWithAddress[4]);
+            if (!streets.containsKey(streetName)) {
+                Street street = new Street();
+                street.getHomes().put(homeNumber, new Home());
+                streets.put(streetName, street);
+            } else if (!streets.get(streetName).getHomes().containsKey(homeNumber)) {
+                streets.get(streetName).getHomes().put(homeNumber, new Home());
+            }
+            streets.get(streetName).getHomes().get(homeNumber).addMember(new Person(personSurname, personName));
+        });
+        reader.close();
+        String[] streetNames = streets.keySet().toArray(new String[0]);
+        Arrays.parallelSort(streetNames, String::compareTo);
+        FileWriter fileWriter = new FileWriter(outputName);
+        for (String streetName : streetNames) {
+            Street street = streets.get(streetName);
+            street.performSorting();
+            int[] sortedHomeNumbers = street.getSortedHomeNumbers();
+            for (int homeNumber : sortedHomeNumbers) {
+                Home home = street.getHomes().get(homeNumber);
+                Person[] sortedMembers = home.getSortedMembers();
+                fileWriter.write(streetName + " " + homeNumber + " - ");
+                for (int i = 0; i < sortedMembers.length; i++) {
+                    fileWriter.write(sortedMembers[i].surname + " " +
+                            sortedMembers[i].name +
+                            ((i != sortedMembers.length - 1) ? ", " : "\n")
+                    );
+                }
+            }
+        }
+        fileWriter.close();
     }
 
     /**
@@ -98,8 +246,19 @@ public class JavaTasks {
      * 99.5
      * 121.3
      */
-    static public void sortTemperatures(String inputName, String outputName) {
-        throw new NotImplementedError();
+    static public void sortTemperatures(String inputName, String outputName) throws IOException {
+        int[] tempNumbers = new int[7731];
+        FileReader reader = new FileReader(inputName);
+        new BufferedReader(reader).lines()
+                .forEach(line -> tempNumbers[(int) ((Float.parseFloat(line) * 10) + 2730)] += 1);
+        reader.close();
+        FileWriter writer = new FileWriter(outputName);
+        for (int i = 0; i < tempNumbers.length; i++) {
+            for (int j = 0; j < tempNumbers[i]; j++) {
+                writer.write(((((float) (i - 2730)) / 10)) + "\n");
+            }
+        }
+        writer.close();
     }
 
     /**

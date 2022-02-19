@@ -3,6 +3,9 @@ package lesson2;
 import kotlin.NotImplementedError;
 import kotlin.Pair;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 @SuppressWarnings("unused")
 public class JavaAlgorithms {
     /**
@@ -97,8 +100,51 @@ public class JavaAlgorithms {
      * Если имеется несколько самых длинных общих подстрок одной длины,
      * вернуть ту из них, которая встречается раньше в строке first.
      */
+
     static public String longestCommonSubstring(String firs, String second) {
-        throw new NotImplementedError();
+        Map<Character, Set<Integer>> characterIndexesMap = new HashMap<>();
+        Map<Character, Set<Character>> characterSequenceMap = new HashMap<>();
+        if (second.length() == 0 || firs.length() == 0) return "";
+        char[] charArrayOfSecond = second.toCharArray();
+        for (int i = 0; i < charArrayOfSecond.length; i++) {
+            char currChar = charArrayOfSecond[i];
+            Set<Integer> indexesOfCurr = characterIndexesMap.computeIfAbsent(currChar, k -> new HashSet<>());
+            indexesOfCurr.add(i);
+            if (i < charArrayOfSecond.length - 1) {
+                char nextChar = charArrayOfSecond[i + 1];
+                Set<Character> nextChars = characterSequenceMap.computeIfAbsent(currChar, k -> new HashSet<>());
+                nextChars.add(nextChar);
+            } else {
+                characterSequenceMap.computeIfAbsent(currChar, k -> new HashSet<>());
+            }
+        }
+        char[] charArrayOfFirst = firs.toCharArray();
+        int lengthSubstring = 0;
+        int indexOfBiggerAtFirst = -1;
+        for (int charInd = 0; charInd < charArrayOfFirst.length; charInd++) {
+            Set<Integer> indexesOfFirstCharacter = characterIndexesMap.get(charArrayOfFirst[charInd]);
+            if (indexesOfFirstCharacter == null)
+                continue;
+            Set<Integer> currentIndexes = new HashSet<>(indexesOfFirstCharacter);
+            for (int indexOfLastChar = charInd + 1; indexOfLastChar < charArrayOfFirst.length; indexOfLastChar++) {
+                char lastChar = charArrayOfFirst[indexOfLastChar];
+                currentIndexes = currentIndexes.stream().map(it -> it + 1).collect(Collectors.toSet());
+                Set<Integer> currentCharIndexes = characterIndexesMap.get(lastChar);
+                currentCharIndexes = (currentCharIndexes == null) ? new HashSet<>() : currentCharIndexes;
+                currentIndexes.retainAll(currentCharIndexes);
+                if (currentIndexes.isEmpty()) {
+                    if (lengthSubstring < indexOfLastChar - charInd) {
+                        indexOfBiggerAtFirst = charInd;
+                        lengthSubstring = indexOfLastChar - charInd;
+                    }
+                    break;
+                }
+            }
+        }
+        if (indexOfBiggerAtFirst != -1) {
+            return firs.substring(indexOfBiggerAtFirst, indexOfBiggerAtFirst + lengthSubstring);
+        }
+        return "";
     }
 
     /**
@@ -111,7 +157,20 @@ public class JavaAlgorithms {
      * Справка: простым считается число, которое делится нацело только на 1 и на себя.
      * Единица простым числом не считается.
      */
+
+    //Реализация Решета Эратосфена https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes
     static public int calcPrimesNumber(int limit) {
-        throw new NotImplementedError();
+        if (limit <= 1) return 0;
+        byte[] bitwiseSieve = new byte[limit/8 + 1];
+        int primesCounter = 0;
+        for (int i = 2; i <= limit; i++) {
+            if ((bitwiseSieve[(i-2)/8] & 1<<((i-2)%8)) == 0) {
+                primesCounter++;
+                for (int j = i * 2; j <= limit; j += i) {
+                    bitwiseSieve[(j-2)/8] |= 1<<((j-2)%8);
+                }
+            }
+        }
+        return primesCounter;
     }
 }
