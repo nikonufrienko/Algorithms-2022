@@ -6,6 +6,76 @@ import kotlin.Pair;
 import java.util.*;
 import java.util.stream.Collectors;
 
+class RepresentedString {
+    private final Map<Character, Set<Integer>> characterIndexesMap;
+    private final Map<Character, LinkedHashSet<Character>> characterSequenceMap;
+    private final LinkedHashSet<Character> characterSet = new LinkedHashSet<>();
+
+    RepresentedString(String value) {
+        characterIndexesMap = new HashMap<>();
+        characterSequenceMap = new HashMap<>();
+        char[] charArrayOfValue = value.toCharArray();
+        for (int i = 0; i < charArrayOfValue.length; i++) {
+            char currChar = charArrayOfValue[i];
+            Set<Integer> indexesOfCurr = characterIndexesMap.computeIfAbsent(currChar, k -> new HashSet<>());
+            indexesOfCurr.add(i);
+            characterSet.add(currChar);
+            if (i < charArrayOfValue.length - 1) {
+                char nextChar = charArrayOfValue[i + 1];
+                Set<Character> nextChars =
+                        characterSequenceMap.computeIfAbsent(currChar, k -> new LinkedHashSet<>());
+                nextChars.add(nextChar);
+            } else {
+                characterSequenceMap.computeIfAbsent(currChar, k -> new LinkedHashSet<>());
+            }
+        }
+    }
+
+    public LinkedHashSet<Character> getCharacterSet() {
+        return characterSet;
+    }
+
+    public Map<Character, Set<Integer>> getCharacterIndexesMap() {
+        return characterIndexesMap;
+    }
+
+    public Map<Character, LinkedHashSet<Character>> getCharacterSequenceMap() {
+        return characterSequenceMap;
+    }
+
+    List<Character> getLongestCommonChain(
+            RepresentedString other, Character currCharacter,
+            Set<Integer> currIndexesOfThisChain, Set<Integer> currIndexesOfOtherChain, List<Character> currChain
+    ) {
+        Set<Character> nextCharacterSet =
+                new HashSet<>(this.getCharacterSequenceMap().get(currCharacter).stream().toList());
+        nextCharacterSet.retainAll(other.getCharacterSequenceMap().get(currCharacter));
+        List<Character> maxChain = currChain;
+        for (Character nextCharacter : nextCharacterSet) {
+            Set<Integer> nextCharacterIndexesOfThis
+                    = currIndexesOfThisChain.stream().map(it -> it + 1).collect(Collectors.toSet());
+            Set<Integer> nextCharacterIndexesOfOther
+                    = currIndexesOfOtherChain.stream().map(it -> it + 1).collect(Collectors.toSet());
+            nextCharacterIndexesOfThis.retainAll(this.getCharacterIndexesMap().get(nextCharacter));
+            nextCharacterIndexesOfOther.retainAll(other.getCharacterIndexesMap().get(nextCharacter));
+            if (nextCharacterIndexesOfThis.isEmpty() || nextCharacterIndexesOfOther.isEmpty()) continue;
+            List<Character> nextChain = new ArrayList<>(currChain);
+            nextChain.add(nextCharacter);
+            List<Character> resultChain =
+                    getLongestCommonChain(
+                            other, nextCharacter, nextCharacterIndexesOfThis,
+                            nextCharacterIndexesOfOther, nextChain
+                    );
+            if (resultChain.size() > maxChain.size()) {
+                maxChain = resultChain;
+            }
+        }
+        return maxChain;
+    }
+}
+
+
+
 @SuppressWarnings("unused")
 public class JavaAlgorithms {
     /**
@@ -101,50 +171,41 @@ public class JavaAlgorithms {
      * вернуть ту из них, которая встречается раньше в строке first.
      */
 
+    /*
+        Здесь мы обходим два дерева таким образом, чтобы найти наибольшую общую цепочку символов, индексы которых
+        непрерывно идут друг за другом (для этого используются множества индексов, нарастание значений которых
+        проверяются на каждом шаге).
+        Трудоёмкость:
+            T = unknown
+            сложно оценить
+        Ресурсы:
+            R=O(С*n) -- так как размер map-ов и размер их содержимого линейно зависит размера входных данных.
+            + цепочки накапливающиеся в процессе рекурсии всегда соответствуют цепочкам в исходных данных
+     */
+
     static public String longestCommonSubstring(String firs, String second) {
-        Map<Character, Set<Integer>> characterIndexesMap = new HashMap<>();
-        Map<Character, Set<Character>> characterSequenceMap = new HashMap<>();
-        if (second.length() == 0 || firs.length() == 0) return "";
-        char[] charArrayOfSecond = second.toCharArray();
-        for (int i = 0; i < charArrayOfSecond.length; i++) {
-            char currChar = charArrayOfSecond[i];
-            Set<Integer> indexesOfCurr = characterIndexesMap.computeIfAbsent(currChar, k -> new HashSet<>());
-            indexesOfCurr.add(i);
-            if (i < charArrayOfSecond.length - 1) {
-                char nextChar = charArrayOfSecond[i + 1];
-                Set<Character> nextChars = characterSequenceMap.computeIfAbsent(currChar, k -> new HashSet<>());
-                nextChars.add(nextChar);
-            } else {
-                characterSequenceMap.computeIfAbsent(currChar, k -> new HashSet<>());
+        RepresentedString representedSecond = new RepresentedString(second);
+        RepresentedString representedFirst = new RepresentedString(firs);
+        List<Character> maxChain = new ArrayList<>();
+        for (Character startCharacter : representedFirst.getCharacterSet()) {
+            if(!representedSecond.getCharacterSet().contains(startCharacter)) continue;
+            Set<Integer> currentIndexesOfFirst = representedFirst.getCharacterIndexesMap().get(startCharacter);
+            Set<Integer> currentIndexesOfSecond = representedSecond.getCharacterIndexesMap().get(startCharacter);
+            List<Character> currChain = new ArrayList<>();
+            currChain.add(startCharacter);
+            List<Character> resultChain = representedFirst.getLongestCommonChain(
+                    representedSecond, startCharacter,
+                    currentIndexesOfFirst,currentIndexesOfSecond, currChain
+            );
+            if(resultChain.size() > maxChain.size()){
+                maxChain = resultChain;
             }
         }
-        char[] charArrayOfFirst = firs.toCharArray();
-        int lengthSubstring = 0;
-        int indexOfBiggerAtFirst = -1;
-        for (int charInd = 0; charInd < charArrayOfFirst.length; charInd++) {
-            Set<Integer> indexesOfFirstCharacter = characterIndexesMap.get(charArrayOfFirst[charInd]);
-            if (indexesOfFirstCharacter == null)
-                continue;
-            Set<Integer> currentIndexes = new HashSet<>(indexesOfFirstCharacter);
-            for (int indexOfLastChar = charInd + 1; indexOfLastChar < charArrayOfFirst.length; indexOfLastChar++) {
-                char lastChar = charArrayOfFirst[indexOfLastChar];
-                currentIndexes = currentIndexes.stream().map(it -> it + 1).collect(Collectors.toSet());
-                Set<Integer> currentCharIndexes = characterIndexesMap.get(lastChar);
-                currentCharIndexes = (currentCharIndexes == null) ? new HashSet<>() : currentCharIndexes;
-                currentIndexes.retainAll(currentCharIndexes);
-                if (currentIndexes.isEmpty()) {
-                    if (lengthSubstring < indexOfLastChar - charInd) {
-                        indexOfBiggerAtFirst = charInd;
-                        lengthSubstring = indexOfLastChar - charInd;
-                    }
-                    break;
-                }
-            }
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Character character : maxChain) {
+            stringBuilder.append(character);
         }
-        if (indexOfBiggerAtFirst != -1) {
-            return firs.substring(indexOfBiggerAtFirst, indexOfBiggerAtFirst + lengthSubstring);
-        }
-        return "";
+        return stringBuilder.toString();
     }
 
     /**
@@ -158,7 +219,12 @@ public class JavaAlgorithms {
      * Единица простым числом не считается.
      */
 
-    //Реализация Решета Эратосфена https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes
+    /*Реализация Решета Эратосфена https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes
+        T = O(n*ln(ln(n)))
+        R = O(n)
+        где n = limit
+    */
+
     static public int calcPrimesNumber(int limit) {
         if (limit <= 1) return 0;
         byte[] bitwiseSieve = new byte[limit/8 + 1];
