@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 class RepresentedString {
     private final Map<Character, Set<Integer>> characterIndexesMap;
     private final Map<Character, LinkedHashSet<Character>> characterSequenceMap;
-    private final LinkedHashSet<Character> characterLinkedSet = new LinkedHashSet<>();
 
     RepresentedString(String value) {
         characterIndexesMap = new HashMap<>();
@@ -19,7 +18,6 @@ class RepresentedString {
             char currChar = charArrayOfValue[i];
             Set<Integer> indexesOfCurr = characterIndexesMap.computeIfAbsent(currChar, k -> new HashSet<>());
             indexesOfCurr.add(i);
-            characterLinkedSet.add(currChar);
             if (i < charArrayOfValue.length - 1) {
                 char nextChar = charArrayOfValue[i + 1];
                 Set<Character> nextChars =
@@ -31,9 +29,6 @@ class RepresentedString {
         }
     }
 
-    public LinkedHashSet<Character> getCharacterLinkedSet() {
-        return characterLinkedSet;
-    }
 
     public Map<Character, Set<Integer>> getCharacterIndexesMap() {
         return characterIndexesMap;
@@ -43,15 +38,18 @@ class RepresentedString {
         return characterSequenceMap;
     }
 
-    public List<Character> getLongestCommonChain(
+    public Pair<List<Character>,Integer> getLongestCommonChain(
             RepresentedString other, Character currCharacter,
             Set<Integer> currIndexesOfThisChain, Set<Integer> currIndexesOfOtherChain, List<Character> currChain
     ) {
+        int endIndex = Integer.MAX_VALUE;
         Set<Character> nextCharacterSet =
                 new HashSet<>(this.getCharacterSequenceMap().get(currCharacter).stream().toList());
         nextCharacterSet.retainAll(other.getCharacterSequenceMap().get(currCharacter));
         List<Character> maxChain = currChain;
+        int counter = 0;
         for (Character nextCharacter : nextCharacterSet) {
+            counter++;
             Set<Integer> nextCharacterIndexesOfThis
                     = currIndexesOfThisChain.stream().map(it -> it + 1).collect(Collectors.toSet());
             Set<Integer> nextCharacterIndexesOfOther
@@ -61,16 +59,25 @@ class RepresentedString {
             if (nextCharacterIndexesOfThis.isEmpty() || nextCharacterIndexesOfOther.isEmpty()) continue;
             List<Character> nextChain = new ArrayList<>(currChain);
             nextChain.add(nextCharacter);
-            List<Character> resultChain =
+            Pair<List<Character>, Integer> resultChain =
                     getLongestCommonChain(
                             other, nextCharacter, nextCharacterIndexesOfThis,
                             nextCharacterIndexesOfOther, nextChain
                     );
-            if (resultChain.size() > maxChain.size()) {
-                maxChain = resultChain;
+            if (resultChain.getFirst().size() > maxChain.size() || (resultChain.getFirst().size() == maxChain.size() && resultChain.getSecond() < endIndex)) {
+                maxChain = resultChain.getFirst();
+                endIndex = resultChain.getSecond();
+
             }
+            /*
+            if(resultChain.getFirst().size() == maxChain.size()){
+                System.out.println(resultChain.getFirst() + " " + maxChain);
+            }*/
         }
-        return maxChain;
+        if(counter == nextCharacterSet.size())//это конечный элемент
+            endIndex = currIndexesOfThisChain.stream().mapToInt(it -> it).min().getAsInt();
+
+        return new Pair(maxChain, endIndex);
     }
 }
 
@@ -188,18 +195,20 @@ public class JavaAlgorithms {
         RepresentedString representedSecond = new RepresentedString(second);
         RepresentedString representedFirst = new RepresentedString(firs);
         List<Character> maxChain = new ArrayList<>();
-        for (Character startCharacter : representedFirst.getCharacterLinkedSet()) {
-            if(!representedSecond.getCharacterLinkedSet().contains(startCharacter)) continue;
+        int minEndInd = 0;
+        for (Character startCharacter : representedFirst.getCharacterIndexesMap().keySet()) {
+            if(!representedSecond.getCharacterIndexesMap().containsKey(startCharacter)) continue;
             Set<Integer> currentIndexesOfFirst = representedFirst.getCharacterIndexesMap().get(startCharacter);
             Set<Integer> currentIndexesOfSecond = representedSecond.getCharacterIndexesMap().get(startCharacter);
             List<Character> currChain = new ArrayList<>();
             currChain.add(startCharacter);
-            List<Character> resultChain = representedFirst.getLongestCommonChain(
+            Pair<List<Character>, Integer> resultChain = representedFirst.getLongestCommonChain(
                     representedSecond, startCharacter,
                     currentIndexesOfFirst,currentIndexesOfSecond, currChain
             );
-            if(resultChain.size() > maxChain.size()){
-                maxChain = resultChain;
+            if(resultChain.getFirst().size() > maxChain.size() || (resultChain.getFirst().size() == maxChain.size()  && minEndInd > resultChain.getSecond())) {
+                maxChain = resultChain.getFirst();
+                minEndInd = resultChain.getSecond();
             }
         }
         StringBuilder stringBuilder = new StringBuilder();
