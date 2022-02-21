@@ -1,16 +1,35 @@
 package lesson2;
 
 import kotlin.NotImplementedError;
-import kotlin.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-class RepresentedString {
-    private final Map<Character, Set<Integer>> characterIndexesMap;
-    private final Map<Character, LinkedHashSet<Character>> characterSequenceMap;
+class Pair<T,E>{
+    private final T first;
+    private final E second;
 
-    RepresentedString(String value) {
+    public T getFirst() {
+        return first;
+    }
+
+    public E getSecond() {
+        return second;
+    }
+
+
+
+    public Pair(T firt, E second) {
+        this.first = firt;
+        this.second = second;
+    }
+}
+
+class StringAsTableOfIndexes {
+    private final Map<Character, Set<Integer>> characterIndexesMap;
+    private final Map<Character, Set<Character>> characterSequenceMap;
+
+    StringAsTableOfIndexes(String value) {
         characterIndexesMap = new HashMap<>();
         characterSequenceMap = new HashMap<>();
         char[] charArrayOfValue = value.toCharArray();
@@ -34,12 +53,37 @@ class RepresentedString {
         return characterIndexesMap;
     }
 
-    public Map<Character, LinkedHashSet<Character>> getCharacterSequenceMap() {
+    public Map<Character, Set<Character>> getCharacterSequenceMap() {
         return characterSequenceMap;
     }
 
-    public Pair<List<Character>,Integer> getLongestCommonChain(
-            RepresentedString other, Character currCharacter,
+    public String recursiveSearchingLongestCommonSubstring(StringAsTableOfIndexes other){
+        List<Character> maxChain = new ArrayList<>();
+        int minEndInd = 0;
+        for (Character startCharacter : this.getCharacterIndexesMap().keySet()) {
+            if(!other.getCharacterIndexesMap().containsKey(startCharacter)) continue;
+            Set<Integer> currentIndexesOfThis = this.getCharacterIndexesMap().get(startCharacter);
+            Set<Integer> currentIndexesOfOther = other.getCharacterIndexesMap().get(startCharacter);
+            List<Character> currChain = new ArrayList<>();
+            currChain.add(startCharacter);
+            Pair<List<Character>, Integer> resultChain = this.getLongestCommonChain(
+                    other, startCharacter,
+                    currentIndexesOfThis,currentIndexesOfOther, currChain
+            );
+            if(resultChain.getFirst().size() > maxChain.size() || (resultChain.getFirst().size() == maxChain.size()  && minEndInd > resultChain.getSecond())) {
+                maxChain = resultChain.getFirst();
+                minEndInd = resultChain.getSecond();
+            }
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Character character : maxChain) {
+            stringBuilder.append(character);
+        }
+        return stringBuilder.toString();
+    }
+
+    private Pair<List<Character>, Integer> getLongestCommonChain(
+            StringAsTableOfIndexes other, Character currCharacter,
             Set<Integer> currIndexesOfThisChain, Set<Integer> currIndexesOfOtherChain, List<Character> currChain
     ) {
         int endIndex = Integer.MAX_VALUE;
@@ -69,15 +113,12 @@ class RepresentedString {
                 endIndex = resultChain.getSecond();
 
             }
-            /*
-            if(resultChain.getFirst().size() == maxChain.size()){
-                System.out.println(resultChain.getFirst() + " " + maxChain);
-            }*/
         }
-        if(counter == nextCharacterSet.size())//это конечный элемент
+        if(counter == nextCharacterSet.size())//обрабатывается случай, когда это конечный элемент цепи
+            //noinspection OptionalGetWithoutIsPresent (Этого не может быть)
             endIndex = currIndexesOfThisChain.stream().mapToInt(it -> it).min().getAsInt();
 
-        return new Pair(maxChain, endIndex);
+        return new Pair<>(maxChain, endIndex);
     }
 }
 
@@ -179,10 +220,10 @@ public class JavaAlgorithms {
      */
 
     /*
-        Здесь мы обходим два графа (скорее что-то похожее на граф) таким образом, чтобы найти наибольшую общую цепочку
-         символов, индексы которых непрерывно идут друг за другом (для этого используются множества индексов, нарастание
-         значений которых проверяется на каждом шаге).
-         
+        Здесь мы каждому уникальному символу в строке сопоставляем множество индексов. Далее эта таблица рекурсивно
+        обходится как граф в глубину. При этом нужно проверять чтобы индексы следующего символа были ровно на 1 больше
+        предыдущего, все индексы не удовлетворяющие этому условию исключаются из множества индексов для последнего узла.
+        Условием окончания обхода является невозможность найти следующий символ с непустым множеством возможных индексов.
         Трудоёмкость:
             T = unknown
             сложно оценить
@@ -192,30 +233,10 @@ public class JavaAlgorithms {
      */
 
     static public String longestCommonSubstring(String firs, String second) {
-        RepresentedString representedSecond = new RepresentedString(second);
-        RepresentedString representedFirst = new RepresentedString(firs);
-        List<Character> maxChain = new ArrayList<>();
-        int minEndInd = 0;
-        for (Character startCharacter : representedFirst.getCharacterIndexesMap().keySet()) {
-            if(!representedSecond.getCharacterIndexesMap().containsKey(startCharacter)) continue;
-            Set<Integer> currentIndexesOfFirst = representedFirst.getCharacterIndexesMap().get(startCharacter);
-            Set<Integer> currentIndexesOfSecond = representedSecond.getCharacterIndexesMap().get(startCharacter);
-            List<Character> currChain = new ArrayList<>();
-            currChain.add(startCharacter);
-            Pair<List<Character>, Integer> resultChain = representedFirst.getLongestCommonChain(
-                    representedSecond, startCharacter,
-                    currentIndexesOfFirst,currentIndexesOfSecond, currChain
-            );
-            if(resultChain.getFirst().size() > maxChain.size() || (resultChain.getFirst().size() == maxChain.size()  && minEndInd > resultChain.getSecond())) {
-                maxChain = resultChain.getFirst();
-                minEndInd = resultChain.getSecond();
-            }
-        }
-        StringBuilder stringBuilder = new StringBuilder();
-        for (Character character : maxChain) {
-            stringBuilder.append(character);
-        }
-        return stringBuilder.toString();
+        StringAsTableOfIndexes representedSecond = new StringAsTableOfIndexes(second);
+        StringAsTableOfIndexes representedFirst = new StringAsTableOfIndexes(firs);
+        return representedFirst.recursiveSearchingLongestCommonSubstring(representedSecond);
+
     }
 
     /**
