@@ -1,29 +1,11 @@
 package lesson2;
 
 import kotlin.NotImplementedError;
+import kotlin.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-class Pair<T,E>{
-    private final T first;
-    private final E second;
-
-    public T getFirst() {
-        return first;
-    }
-
-    public E getSecond() {
-        return second;
-    }
-
-
-
-    public Pair(T firt, E second) {
-        this.first = firt;
-        this.second = second;
-    }
-}
 
 class StringAsTableOfIndexes {
     private final Map<Character, Set<Integer>> characterIndexesMap;
