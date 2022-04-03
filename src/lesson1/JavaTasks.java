@@ -128,6 +128,7 @@ public class JavaTasks {
      * <p>
      * В случае обнаружения неверного формата файла бросить любое исключение.
      */
+
     /*
      * T=O(n*log(n)) (т.к. используется стандартная сортировка для Java -- mergeSort)
      * R=O(n)
@@ -178,8 +179,7 @@ public class JavaTasks {
 
     /*
         T = O(n*ln(n)) -- в худшем случае, при котором 1 млн жителей живет в одном доме. (Т.к. используется mergeSort)
-        R = O(alpha*C*n),alpha зависит от содержания входных данных,
-         alpha < 1 -- поскольку каждому дому и улице будет соответсвовать только одна запись.
+        R = O(n)
      */
     static public void sortAddresses(String inputName, String outputName) throws IOException {
         Map<String, Street> streets = new HashMap<>();
