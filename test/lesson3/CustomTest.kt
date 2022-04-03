@@ -43,7 +43,7 @@ class CustomTest {
             val treeValue = treeIterator2.next()
             println(treeValue)
         }
-        //незнаю что здесь не так
+        //не знаю что здесь не так
         assertEquals(6, tree2.size)
 
     }
