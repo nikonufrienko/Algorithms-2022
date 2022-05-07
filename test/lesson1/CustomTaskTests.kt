@@ -6,6 +6,7 @@ import java.io.Reader
 import java.util.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.Test
 
 class CustomTaskTests {
     fun getExecutionTime(function: () -> Unit): Long {
