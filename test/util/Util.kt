@@ -2,6 +2,7 @@ package util
 
 import org.jetbrains.research.runner.perf.PerfEstimation
 import org.jetbrains.research.runner.perf.estimate
+import java.util.*
 
 data class PerfResult<T>(
     val size: Int = 0,
@@ -19,4 +20,18 @@ fun <T> estimate(sizes: List<Int>, body: (Int) -> PerfResult<T>): PerfEstimation
     }
 
     return estimate(data)
+}
+
+private class StaticGenerator {
+    companion object {
+        val encoder = Base64.getEncoder()
+        val random = Random()
+    }
+}
+
+
+fun generateString(size: Int): String {
+    val byteArray = ByteArray(size)
+    StaticGenerator.random.nextBytes(byteArray)
+    return StaticGenerator.encoder.encodeToString(byteArray)
 }

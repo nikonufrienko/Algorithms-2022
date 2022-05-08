@@ -1,25 +1,18 @@
 package lesson5
 
-import java.util.*
+import util.generateString
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class OpenAddressingSetCustomTest {
-    private val encoder = Base64.getEncoder()
-    private val random = Random()
 
-    private fun generateString(): String {
-        val byteArray = ByteArray(24)
-        random.nextBytes(byteArray)
-        return encoder.encodeToString(byteArray)
-    }
 
     private fun generateControlSet(size: Int): MutableSet<String> {
         val controlSet = mutableSetOf<String>()
         for (j in 0 until size) {
-            val value = generateString()
+            val value = generateString(24)
             controlSet.add(value)
         }
         return controlSet
